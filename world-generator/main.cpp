@@ -19,6 +19,12 @@ void generateMap(float* map, size_t width, size_t height, size_t octaves, float 
 
 void mapToPixels(float* map, size_t width, size_t height, sf::Uint8* pixels, size_t p_width = WINDOW_WIDTH);
 
+
+void colorMap()
+
+void generateMapTexture(float* map, size_t width, size_t height, size_t octaves, float persistence,
+	float lacunarity, sf::Uint8* pixels, size_t p_width, sf::Texture& target);
+
 template<typename T>
 inline float dotProduct(const sf::Vector2<T>& lh, const sf::Vector2<T>& rh) {
 	return lh.x * rh.x + lh.y * rh.y;
@@ -166,6 +172,12 @@ int main(int argc, char** argv) {
 	float persistance = 0.5f;
 	float lacunarity = 2.0f;
 
+	std::map<const char*, float> levels;
+	levels.insert({ "1", 1.f});
+	float l_a = 0;
+	float color[3]{ 0 };
+	//ImVec4 color;
+
 	sf::Clock deltaClock;
 	while (window.isOpen()) {
 		sf::Event event;
@@ -178,27 +190,23 @@ int main(int argc, char** argv) {
 		}
 		ImGui::SFML::Update(window, deltaClock.restart());
 		ImGui::Begin("Sample window");
-		if (ImGui::InputInt("Ocatves", &octaves)) {
-			generateMap(map, map_width, map_height, octaves, persistance, lacunarity);
-			mapToPixels(map, map_width, map_height, pixels);
-			mapTex.update(pixels);
+		std::for_each(levels.begin(), levels.end(),
+			[&color](auto& a) {
+				ImGui::InputFloat(a.first, &a.second, 1.f); 
+				ImGui::ColorEdit3(a.first, color);
+			});
+		//ImGui::BeginListBox("B");
+		//ImGui::InputFloat("A", &l_a, 1.f);
+		//ImGui::EndListBox();
+		if (ImGui::InputInt("Ocatves", &octaves) ||
+			ImGui::SliderFloat("Persistance", &persistance, 0.f, 1.f) ||
+			ImGui::SliderFloat("Lacunarity", &lacunarity, 1.f, 4.f) ||
+			ImGui::Button("Generate")) {
+			generateMapTexture(map, map_width, map_height, octaves, persistance, lacunarity, pixels, WINDOW_WIDTH, mapTex);
 		}
-		if (ImGui::SliderFloat("Persistance", &persistance, 0.f, 1.f)) {
-			generateMap(map, map_width, map_height, octaves, persistance, lacunarity);
-				mapToPixels(map, map_width, map_height, pixels);
-				mapTex.update(pixels);
-		}
-		if (ImGui::SliderFloat("Lacunarity", &lacunarity, 1.f, 4.f)) {
-			generateMap(map, map_width, map_height, octaves, persistance, lacunarity);
-				mapToPixels(map, map_width, map_height, pixels);
-				mapTex.update(pixels);
-		}
-		if(ImGui::Button("Generate")) {
-			generateMap(map, map_width, map_height, octaves, persistance, lacunarity);
-			mapToPixels(map, map_width, map_height, pixels);
-			mapTex.update(pixels);
-		}
-		ImGui::End(); 
+		ImGui::End();
+		
+		mapTex.update(pixels);
 
 		window.clear(sf::Color::White);
 
@@ -243,4 +251,11 @@ void mapToPixels(float* map, size_t width, size_t height, sf::Uint8* pixels, siz
 			pixels[(i * p_width + j) * 4 + 2] = color;
 		}
 	}
+}
+
+void generateMapTexture(float* map, size_t width, size_t height, size_t octaves, float persistence,
+	float lacunarity, sf::Uint8* pixels, size_t p_width, sf::Texture& target) {
+	generateMap(map, width, height, octaves, persistence, lacunarity);
+	mapToPixels(map, width, height, pixels);
+	target.update(pixels);
 }
